@@ -184,6 +184,12 @@ export class Page extends ManagerItem implements IPage {
     );
   }
 
+  setHeaders (headers : Record<string, string>) {
+    return this.caseManager(
+      chromePage => from(chromePage.setExtraHTTPHeaders(headers)),
+    )
+  }
+
   hover ({ selector, xpath } : DomOptions) {
     return this.caseManager(
       chromePage => {
