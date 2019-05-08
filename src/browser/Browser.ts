@@ -15,13 +15,6 @@ export enum BrowserType {
   PhantomJS = 'phantomjs',
 }
 
-export interface IBrowserOptions {
-  screenSize? : {
-    width : number;
-    height : number;
-  }
-}
-
 export interface IBrowser {
   reset () : Observable<void>;
 
@@ -199,19 +192,19 @@ export class Browser extends ManagerItem implements IBrowser {
     );
   }
 
-  private registerEvent (event : string, fn : EventCallback) {
+  private registerEvent (event : any, fn : EventCallback) {
     return this.caseManager(
       chromeBrowser => {
-        chromeBrowser.addListener(event, fn);
+        chromeBrowser.on(event, fn);
         return of(null);
       },
     );
   }
 
-  private deregisterEvent (event : string, fn : EventCallback) {
+  private deregisterEvent (event : any, fn : EventCallback) {
     return this.caseManager(
       chromeBrowser => {
-        chromeBrowser.removeListener(event, fn);
+        chromeBrowser.off(event, fn);
         return of(null);
       },
     );

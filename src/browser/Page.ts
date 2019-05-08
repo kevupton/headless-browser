@@ -465,19 +465,19 @@ export class Page extends ManagerItem implements IPage {
     return xpath ? from(chromePage.$x(selector)) : from(chromePage.$$(selector));
   }
 
-  private registerEvent (event : string, fn : EventCallback) {
+  private registerEvent (event : any, fn : EventCallback) {
     return this.caseManager(
       chromePage => {
-        chromePage.addListener(event, fn);
+        chromePage.on(event, fn);
         return of(null);
       },
     );
   }
 
-  private deregisterEvent (event : string, fn : EventCallback) {
+  private deregisterEvent (event : any, fn : EventCallback) {
     return this.caseManager(
       chromePage => {
-        chromePage.removeListener(event, fn);
+        chromePage.off(event, fn);
         return of(null);
       },
     );
