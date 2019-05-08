@@ -23,11 +23,17 @@ import { ManagerItem } from './ManagerItem';
 
 export interface IPage {
 
+  equals(obj : any) : Observable<boolean>;
+
   getContent () : Observable<string>;
+
+  setHeaders (headers : Record<string, string>) : Observable<void>;
 
   open (url : string, options? : DirectNavigationOptions) : Observable<IOpenResponse>;
 
   run (fn : EvaluateFn, ...args : any[]) : Observable<void>;
+
+  on$<K extends keyof PageEventObj> (event : K) : Observable<[PageEventObj[K], ...any[]]>;
 
   contains (options? : DomOptions) : Observable<boolean>;
 
