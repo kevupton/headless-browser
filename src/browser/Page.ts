@@ -2,12 +2,14 @@ import { WebPage as PhantomPage } from 'phantom';
 import {
   Browser as Chrome,
   ClickOptions,
-  Cookie, DirectNavigationOptions,
+  Cookie,
+  DirectNavigationOptions,
   ElementHandle,
   EmulateOptions,
   EvaluateFn,
   NavigationOptions,
   Page as ChromePage,
+  PageEventObj,
   ScreenshotOptions,
 } from 'puppeteer';
 import { AsyncSubject, combineLatest, Observable } from 'rxjs';
@@ -15,6 +17,7 @@ import { from } from 'rxjs/internal/observable/from';
 import { of } from 'rxjs/internal/observable/of';
 import { tap } from 'rxjs/internal/operators/tap';
 import { flatMap, map, mapTo } from 'rxjs/operators';
+import { EventCallback, RxjsBasicEventManager } from '../lib/RxjsBasicEventManager';
 import { Browser } from './Browser';
 import { ManagerItem } from './ManagerItem';
 
@@ -100,7 +103,11 @@ export interface ScrollTopOptions {
 
 export class Page extends ManagerItem implements IPage {
 
-  private readonly pageSubject = new AsyncSubject<IPagePossibilities>();
+  private readonly pageSubject  = new AsyncSubject<IPagePossibilities>();
+  private readonly eventManager = new RxjsBasicEventManager(
+    (event, fn) => this.registerEvent(event, fn),
+    (event, fn) => this.deregisterEvent(event, fn),
+  );
 
   constructor (
     private readonly browser : Browser,
@@ -112,6 +119,10 @@ export class Page extends ManagerItem implements IPage {
       this.pageSubject.next(existingPage);
       this.pageSubject.complete();
     }
+  }
+
+  on$<K extends keyof PageEventObj> (event : K) : Observable<[PageEventObj[K], ...any[]]> {
+    return this.eventManager.getEvent$(event);
   }
 
   getContent () : Observable<string> {
@@ -187,7 +198,7 @@ export class Page extends ManagerItem implements IPage {
   setHeaders (headers : Record<string, string>) {
     return this.caseManager(
       chromePage => from(chromePage.setExtraHTTPHeaders(headers)),
-    )
+    );
   }
 
   hover ({ selector, xpath } : DomOptions) {
@@ -448,4 +459,21 @@ export class Page extends ManagerItem implements IPage {
     return xpath ? from(chromePage.$x(selector)) : from(chromePage.$$(selector));
   }
 
+  private registerEvent (event : string, fn : EventCallback) {
+    return this.caseManager(
+      chromePage => {
+        chromePage.addListener(event, fn);
+        return of(null);
+      },
+    );
+  }
+
+  private deregisterEvent (event : string, fn : EventCallback) {
+    return this.caseManager(
+      chromePage => {
+        chromePage.removeListener(event, fn);
+        return of(null);
+      },
+    );
+  }
 }
