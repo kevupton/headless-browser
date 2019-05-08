@@ -31,16 +31,14 @@ export class RxjsBasicEventManager {
 
   private generateEventListener (event : string) : Observable<any[]> {
     let fnToRegister : EventCallback;
-    const removeEvent = () => this.offEventHandler(event, fnToRegister);
 
     return new Observable<any[]>(subscriber => {
       fnToRegister = (...args : any[]) => subscriber.next(args);
-      this.onEventHandler(event, fnToRegister);
 
-      // complete the observable when reset has fired.
-      subscriber.add(this.resetSubject.subscribe(() => subscriber.complete()));
+      subscriber.add(this.onEventHandler(event, fnToRegister).subscribe());
+      subscriber.add(this.resetSubject.subscribe(() => subscriber.complete())); // complete the observable when reset has fired.
     }).pipe(
-      finalize(removeEvent),
+      finalize(() => this.offEventHandler(event, fnToRegister).subscribe()),
       share(),
     );
   }

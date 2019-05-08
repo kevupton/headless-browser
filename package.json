@@ -13,7 +13,7 @@
     "dev": "cross-env DEBUG=true ts-node-dev src/index.ts",
     "prod": "ts-node-dev src/index.ts",
     "prepublish": "npm run clean && npm run build",
-    "test:event-manager": "ts-node -O '{\"module\": \"commonjs\"}' test/rxjs-event-manager.test.ts"
+    "test:event-manager": "ts-node-dev -O '{\"module\": \"commonjs\"}' test/rxjs-event-manager.test.ts"
   },
   "repository": "https://github.com/kevupton/headless-browser",
   "author": "Kevin Upton",
