@@ -148,14 +148,14 @@ export class Browser extends ManagerItem implements IBrowser {
               next: (page) => {
                 this.pageManager.closeTab(page);
               },
-              error: e => console.error('Target Destroyed Error', e),
+              error: () => {},
             });
 
           this.unsubscribeOnDestroy(eventSubscription);
         }),
         flatMap(browser => from(browser.pages())
           .pipe(
-            tap(pages => this.pageManager.registerPages(
+            flatMap(pages => this.pageManager.registerPages(
               pages.map(page => (<IPagePossibilities>{ chromePage: page })),
             )),
             mapTo(browser),

@@ -58,20 +58,18 @@ export class PageManager extends Manager<Page> {
   registerPages (pagePossibilities : IPagePossibilities[]) {
     const pages = pagePossibilities.map(possibilities => new Page(this.browser, possibilities));
 
-    return combineLatest(pages.map(page => page.setViewport(1800, 1200)))
+    this.instancesSubject.subscribe(values => console.log(values.length));
+
+    return combineLatest(
+      pages.map(page => page.setViewport(1800, 1200))
+    )
       .pipe(
-        tap(() => {
-          this.instancesSubject.next([
-            ...this.instancesSubject.value,
-            ...pages,
-          ]);
-        }),
+        tap(() => pages.forEach(page => this.addInstanceToList(page))),
         mapTo(undefined),
       );
   }
 
   closeTabAtIndex (tabIndex : number) {
-    return this.getInstance(tabIndex)
-      .destroy();
+    return this.getInstance(tabIndex).destroy();
   }
 }

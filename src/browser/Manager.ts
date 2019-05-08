@@ -21,7 +21,7 @@ export abstract class Manager<T extends ManagerItem> {
     distinctUntilChanged(),
     flatMap(instance => {
       if (!instance) {
-        return this.openNewInstance()
+        return this.openNewInstance();
       }
       return of(instance);
     }),
@@ -38,10 +38,10 @@ export abstract class Manager<T extends ManagerItem> {
     this.keepActiveIndexInsideBounds();
   }
 
-  protected abstract generateNewInstanceConfig() : NewInstanceConfig<T>;
+  protected abstract generateNewInstanceConfig () : NewInstanceConfig<T>;
 
   getInstance (index? : number) {
-    index     = index || this.activeIndexSubject.value;
+    index          = index || this.activeIndexSubject.value;
     const instance = this.instancesSubject.value[index];
 
     if (!instance) {
@@ -51,7 +51,7 @@ export abstract class Manager<T extends ManagerItem> {
     return instance;
   }
 
-  setActiveInstance(index : number) {
+  setActiveInstance (index : number) {
     const instance = this.getInstance(index);
     this.activeIndexSubject.next(index);
     return of(instance);
@@ -67,29 +67,35 @@ export abstract class Manager<T extends ManagerItem> {
   }
 
   openNewInstance () {
-    const { instance, afterSetup } = this.generateNewInstanceConfig();
     return new Observable<T>(subscriber => {
+      const { instance, afterSetup } = this.generateNewInstanceConfig();
+
       subscriber.add(instance
         .setup()
         .pipe(afterSetup || pipe())
         .subscribe({
           complete: () => {
-            instance.destroyed$.subscribe(() => {
-              this.instancesSubject.next(
-                this.instancesSubject.value.filter(i => i !== instance),
-              );
-            });
-
-            this.instancesSubject.next([
-              ...this.instancesSubject.value,
-              instance,
-            ]);
+            this.addInstanceToList(instance);
 
             subscriber.next(instance);
             subscriber.complete();
           },
         }));
     });
+  }
+
+  protected addInstanceToList (...instances : T[]) {
+    instances.forEach(instance =>
+      instance.destroyed$.subscribe(() => {
+        this.instancesSubject.next(
+          this.instancesSubject.value.filter(i => i !== instance),
+        );
+      }));
+
+    this.instancesSubject.next([
+      ...this.instancesSubject.value,
+      ...instances,
+    ]);
   }
 
   private keepActiveIndexInsideBounds () {

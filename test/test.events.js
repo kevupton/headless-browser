@@ -6,7 +6,7 @@ const path = require('path');
 
 // const content = fs.readFileSync(path.join(__dirname, './test.html'), 'utf-8');
 
-updateEnvironment({ debug: true });
+updateEnvironment({ debug: true, headless: false });
 
 browserManager.activeInstance$.pipe(
   flatMap(browser => browser.activePage$),
