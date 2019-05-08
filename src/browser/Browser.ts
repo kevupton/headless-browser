@@ -144,8 +144,11 @@ export class Browser extends ManagerItem implements IBrowser {
             .pipe(
               flatMap(([target]) => from(target.page())),
             )
-            .subscribe((page) => {
-              this.pageManager.closeTab(page);
+            .subscribe({
+              next: (page) => {
+                this.pageManager.closeTab(page);
+              },
+              error: e => console.error('Target Destroyed Error', e),
             });
 
           this.unsubscribeOnDestroy(eventSubscription);
