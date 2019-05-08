@@ -145,21 +145,23 @@ export class Browser extends ManagerItem implements IBrowser {
               flatMap(([target]) => from(target.page())),
             )
             .subscribe({
-              next: (page) => {
-                this.pageManager.closeTab(page);
-              },
+              next: page => this.pageManager.closeTab(page),
               error: () => {},
             });
 
+          const event2Sub = this.on$('targetcreated')
+            .pipe(
+              flatMap(([target]) => from(target.page())),
+            )
+            .subscribe({
+              next: page => this.pageManager.registerPages([{ chromePage: page }]),
+              error: () => {},
+            });
+
+          this.unsubscribeOnDestroy(event2Sub);
           this.unsubscribeOnDestroy(eventSubscription);
         }),
-        flatMap(browser => from(browser.pages())
-          .pipe(
-            flatMap(pages => this.pageManager.registerPages(
-              pages.map(page => (<IPagePossibilities>{ chromePage: page })),
-            )),
-            mapTo(browser),
-          )),
+        flatMap(browser => this.registerChromePages(browser)),
         tap((browser) => {
           this.browserSubject.next({ chromeBrowser: browser });
           this.browserSubject.complete();
@@ -210,6 +212,15 @@ export class Browser extends ManagerItem implements IBrowser {
         chromeBrowser.off(event, fn);
         return of(null);
       },
+    );
+  }
+
+  private registerChromePages (chromeBrowser : Chrome) {
+    return from(chromeBrowser.pages()).pipe(
+      flatMap(pages => this.pageManager.registerPages(
+        pages.map(page => (<IPagePossibilities>{ chromePage: page })),
+      )),
+      mapTo(chromeBrowser),
     );
   }
 }

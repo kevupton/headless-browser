@@ -1,4 +1,4 @@
-import { combineLatest, Observable, pipe } from 'rxjs';
+import { combineLatest, pipe } from 'rxjs';
 import { of } from 'rxjs/internal/observable/of';
 import { tap } from 'rxjs/internal/operators/tap';
 import { flatMap, mapTo } from 'rxjs/operators';
@@ -33,10 +33,9 @@ export class PageManager extends Manager<Page> {
     }
 
     return combineLatest(
-      pages.map(page => page.equals(tabToRemove)
-        .pipe(
-          tap(isEqual => isEqual && page.destroy()),
-        )),
+      pages.map(page => page.equals(tabToRemove).pipe(
+        flatMap(isEqual => isEqual && page.destroy() || of(null)),
+      )),
     );
   }
 
@@ -47,21 +46,15 @@ export class PageManager extends Manager<Page> {
       );
   }
 
-  reset () : Observable<undefined> {
-    return super.reset()
-      .pipe(
-        flatMap(() => this.openNewInstance()),
-        mapTo(undefined),
-      );
-  }
-
   registerPages (pagePossibilities : IPagePossibilities[]) {
     const pages = pagePossibilities.map(possibilities => new Page(this.browser, possibilities));
 
-    this.instancesSubject.subscribe(values => console.log(values.length));
+    if (!pages.length) {
+      return of(null);
+    }
 
     return combineLatest(
-      pages.map(page => page.setViewport(1800, 1200))
+      pages.map(page => page.setViewport(1800, 1200)),
     )
       .pipe(
         tap(() => pages.forEach(page => this.addInstanceToList(page))),

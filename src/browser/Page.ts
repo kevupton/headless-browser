@@ -122,6 +122,7 @@ export class Page extends ManagerItem implements IPage {
     super();
 
     if (existingPage) {
+      this.setConstructed();
       this.pageSubject.next(existingPage);
       this.pageSubject.complete();
     }
