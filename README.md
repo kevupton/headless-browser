@@ -8,7 +8,8 @@ npm i -g headless-browser
 ```
 
 ```bash
-yarn global add headless-browser```
+yarn global add headless-browser
+```
 
 ### USAGE
 Execute command to run:
