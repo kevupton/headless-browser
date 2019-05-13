@@ -4,13 +4,16 @@
 
 ### INSTALL
 ```bash
-npm i -g phantom-crawler-server
+npm i -g headless-browser
 ```
+
+```bash
+yarn global add headless-browser```
 
 ### USAGE
 Execute command to run:
 ```bash
-phantom-crawler
+headless-browser
 ```
 
 #### GET
