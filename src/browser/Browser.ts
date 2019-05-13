@@ -15,13 +15,6 @@ export enum BrowserType {
   PhantomJS = 'phantomjs',
 }
 
-export interface IBrowserOptions {
-  screenSize? : {
-    width : number;
-    height : number;
-  }
-}
-
 export interface IBrowser {
   reset () : Observable<void>;
 
@@ -137,7 +130,7 @@ export class Browser extends ManagerItem implements IBrowser {
     console.info('[INFO] Starting Chromium browser');
 
     return from(puppeteer.launch({
-      headless: !(environment.debug || environment.openBrowser),
+      headless: environment.headless,
       args: args,
     }))
       .pipe(
@@ -151,19 +144,24 @@ export class Browser extends ManagerItem implements IBrowser {
             .pipe(
               flatMap(([target]) => from(target.page())),
             )
-            .subscribe((page) => {
-              this.pageManager.closeTab(page);
+            .subscribe({
+              next: page => this.pageManager.closeTab(page),
+              error: () => {},
             });
 
+          const event2Sub = this.on$('targetcreated')
+            .pipe(
+              flatMap(([target]) => from(target.page())),
+            )
+            .subscribe({
+              next: page => this.pageManager.registerPages([{ chromePage: page }]),
+              error: () => {},
+            });
+
+          this.unsubscribeOnDestroy(event2Sub);
           this.unsubscribeOnDestroy(eventSubscription);
         }),
-        flatMap(browser => from(browser.pages())
-          .pipe(
-            tap(pages => this.pageManager.registerPages(
-              pages.map(page => (<IPagePossibilities>{ chromePage: page })),
-            )),
-            mapTo(browser),
-          )),
+        flatMap(browser => this.registerChromePages(browser)),
         tap((browser) => {
           this.browserSubject.next({ chromeBrowser: browser });
           this.browserSubject.complete();
@@ -199,21 +197,30 @@ export class Browser extends ManagerItem implements IBrowser {
     );
   }
 
-  private registerEvent (event : string, fn : EventCallback) {
+  private registerEvent (event : any, fn : EventCallback) {
     return this.caseManager(
       chromeBrowser => {
-        chromeBrowser.addListener(event, fn);
+        chromeBrowser.on(event, fn);
         return of(null);
       },
     );
   }
 
-  private deregisterEvent (event : string, fn : EventCallback) {
+  private deregisterEvent (event : any, fn : EventCallback) {
     return this.caseManager(
       chromeBrowser => {
-        chromeBrowser.removeListener(event, fn);
+        chromeBrowser.off(event, fn);
         return of(null);
       },
+    );
+  }
+
+  private registerChromePages (chromeBrowser : Chrome) {
+    return from(chromeBrowser.pages()).pipe(
+      flatMap(pages => this.pageManager.registerPages(
+        pages.map(page => (<IPagePossibilities>{ chromePage: page })),
+      )),
+      mapTo(chromeBrowser),
     );
   }
 }

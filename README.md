@@ -1,6 +1,6 @@
-# PHANTOM CRAWLER SERVER
+# HEADLESS-BROWSER
 
-## Easy web-crawling using HTTP API server.
+## Easy web-crawling using HTTP API server or node import.
 
 ### INSTALL
 ```bash

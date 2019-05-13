@@ -28,12 +28,12 @@ export abstract class ManagerItem {
       throw new Error('Object is not in a correct state in order setup');
     }
 
-    this.setupStage = SetupStage.Constructed;
     return (this.handleConstruction() || of(null))
       .pipe(
         tap(() => {
           this.constructedSubject.next();
           this.constructedSubject.complete();
+          this.setupStage = SetupStage.Constructed;
         }),
         mapTo(this),
         shareReplay(1),
@@ -62,6 +62,10 @@ export abstract class ManagerItem {
         mapTo(undefined),
         shareReplay(1),
       );
+  }
+
+  protected setConstructed() {
+    this.setupStage = SetupStage.Constructed;
   }
 
   protected abstract handleDestruct () : Observable<any> | void;

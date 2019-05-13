@@ -1,15 +1,11 @@
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { finalize, share } from 'rxjs/operators';
-
-interface EventSubscriptions {
-  [key : string] : Observable<any>;
-}
 
 export type EventCallback = (...args : any[]) => any;
 
 export class RxjsBasicEventManager {
-  private readonly eventsSubject = new BehaviorSubject<EventSubscriptions>({});
-  private readonly resetSubject  = new Subject<void>();
+  private readonly eventToObservable = new Map<string, Observable<any>>();
+  private readonly resetSubject      = new Subject<void>();
 
   constructor (
     private readonly onEventHandler : (event : string, fn : EventCallback) => Observable<any>,
@@ -18,36 +14,31 @@ export class RxjsBasicEventManager {
 
   reset () {
     this.resetSubject.next();
-    this.eventsSubject.next({});
+    this.eventToObservable.clear();
   }
 
   getEvent$ (event : string) {
-    const events = this.eventsSubject.value;
-    if (events[event]) {
-      return events[event];
+    let obs$ = this.eventToObservable.get(event);
+    if (obs$) {
+      return obs$;
     }
 
-    const event$ = this.generateEventListener(event);
-    this.eventsSubject.next({
-      ...events,
-      [event]: event$,
-    });
+    obs$ = this.generateEventListener(event);
+    this.eventToObservable.set(event, obs$);
 
-    return event$;
+    return obs$;
   }
 
   private generateEventListener (event : string) : Observable<any[]> {
     let fnToRegister : EventCallback;
-    const removeEvent = () => this.offEventHandler(event, fnToRegister);
 
     return new Observable<any[]>(subscriber => {
       fnToRegister = (...args : any[]) => subscriber.next(args);
-      this.onEventHandler(event, fnToRegister);
 
-      // complete the observable when reset has fired.
-      subscriber.add(this.resetSubject.subscribe(() => subscriber.complete()));
+      subscriber.add(this.onEventHandler(event, fnToRegister).subscribe());
+      subscriber.add(this.resetSubject.subscribe(() => subscriber.complete())); // complete the observable when reset has fired.
     }).pipe(
-      finalize(removeEvent),
+      finalize(() => this.offEventHandler(event, fnToRegister).subscribe()),
       share(),
     );
   }

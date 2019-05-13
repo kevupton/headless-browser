@@ -3,11 +3,13 @@ import {
   Browser as Chrome,
   ClickOptions,
   Cookie,
+  DirectNavigationOptions,
   ElementHandle,
   EmulateOptions,
   EvaluateFn,
   NavigationOptions,
   Page as ChromePage,
+  PageEventObj,
   ScreenshotOptions,
 } from 'puppeteer';
 import { AsyncSubject, combineLatest, Observable } from 'rxjs';
@@ -15,16 +17,23 @@ import { from } from 'rxjs/internal/observable/from';
 import { of } from 'rxjs/internal/observable/of';
 import { tap } from 'rxjs/internal/operators/tap';
 import { flatMap, map, mapTo } from 'rxjs/operators';
+import { EventCallback, RxjsBasicEventManager } from '../lib/RxjsBasicEventManager';
 import { Browser } from './Browser';
 import { ManagerItem } from './ManagerItem';
 
 export interface IPage {
 
+  equals(obj : any) : Observable<boolean>;
+
   getContent () : Observable<string>;
 
-  open (url : string) : Observable<IOpenResponse>;
+  setHeaders (headers : Record<string, string>) : Observable<void>;
+
+  open (url : string, options? : DirectNavigationOptions) : Observable<IOpenResponse>;
 
   run (fn : EvaluateFn, ...args : any[]) : Observable<void>;
+
+  on$<K extends keyof PageEventObj> (event : K) : Observable<[PageEventObj[K], ...any[]]>;
 
   contains (options? : DomOptions) : Observable<boolean>;
 
@@ -100,7 +109,11 @@ export interface ScrollTopOptions {
 
 export class Page extends ManagerItem implements IPage {
 
-  private readonly pageSubject = new AsyncSubject<IPagePossibilities>();
+  private readonly pageSubject  = new AsyncSubject<IPagePossibilities>();
+  private readonly eventManager = new RxjsBasicEventManager(
+    (event, fn) => this.registerEvent(event, fn),
+    (event, fn) => this.deregisterEvent(event, fn),
+  );
 
   constructor (
     private readonly browser : Browser,
@@ -109,9 +122,14 @@ export class Page extends ManagerItem implements IPage {
     super();
 
     if (existingPage) {
+      this.setConstructed();
       this.pageSubject.next(existingPage);
       this.pageSubject.complete();
     }
+  }
+
+  on$<K extends keyof PageEventObj> (event : K) : Observable<[PageEventObj[K], ...any[]]> {
+    return this.eventManager.getEvent$(event);
   }
 
   getContent () : Observable<string> {
@@ -126,9 +144,9 @@ export class Page extends ManagerItem implements IPage {
     );
   }
 
-  open (url : string) : Observable<IOpenResponse> {
+  open (url : string, options? : DirectNavigationOptions) : Observable<IOpenResponse> {
     return this.caseManager(
-      chromePage => from(chromePage.goto(url, { timeout: 300000 }))
+      chromePage => from(chromePage.goto(url, options))
         .pipe(
           map(response => ({
             status: response && response.status() || null,
@@ -181,6 +199,12 @@ export class Page extends ManagerItem implements IPage {
             }),
           );
       },
+    );
+  }
+
+  setHeaders (headers : Record<string, string>) {
+    return this.caseManager(
+      chromePage => from(chromePage.setExtraHTTPHeaders(headers)),
     );
   }
 
@@ -442,4 +466,21 @@ export class Page extends ManagerItem implements IPage {
     return xpath ? from(chromePage.$x(selector)) : from(chromePage.$$(selector));
   }
 
+  private registerEvent (event : any, fn : EventCallback) {
+    return this.caseManager(
+      chromePage => {
+        chromePage.on(event, fn);
+        return of(null);
+      },
+    );
+  }
+
+  private deregisterEvent (event : any, fn : EventCallback) {
+    return this.caseManager(
+      chromePage => {
+        chromePage.off(event, fn);
+        return of(null);
+      },
+    );
+  }
 }

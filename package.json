@@ -1,6 +1,6 @@
 {
   "name": "headless-browser",
-  "version": "0.0.2",
+  "version": "0.0.10",
   "description": "Crawl websites with PhantomJS or Puppeteer",
   "main": "lib/app.js",
   "typings": "lib/index.d.ts",
@@ -12,7 +12,8 @@
     "watch": "webpack --watch",
     "dev": "cross-env DEBUG=true ts-node-dev src/index.ts",
     "prod": "ts-node-dev src/index.ts",
-    "prepublish": "npm run clean && npm run build"
+    "prepublish": "npm run clean && npm run build",
+    "test:event-manager": "ts-node-dev -O '{\"module\": \"commonjs\"}' test/rxjs-event-manager.test.ts"
   },
   "repository": "https://github.com/kevupton/headless-browser",
   "author": "Kevin Upton",
